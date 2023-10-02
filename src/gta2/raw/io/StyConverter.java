@@ -1,5 +1,6 @@
 package gta2.raw.io;
 
+import gta2.raw.io.structures.ArgbImage;
 import gta2.raw.io.structures.RgbaImage;
 import gta2.raw.sty.StyFileStructure;
 import gta2.raw.sty.structures.StySpriteIndex;
@@ -27,56 +28,142 @@ public class StyConverter {
     }
     
     public RgbaImage convertTileToRgba(int tile) {
-        int base = structure.getPaletteBase().calcTileBase();
-        int physPalette = structure.getPaletteIndex().getPhysPalette()[base + tile];
-        byte[] palettePage = structure.getPalletePages().get(physPalette / PAGE_PALETTES).getRaw();
-        byte[] tilePage = structure.getTilePages().get(tile / PAGE_TILES).getRaw();
-        int tileIndex = tile % PAGE_TILES;
-        int left = (tileIndex % PAGE_H_TILES) * TILE_WIDTH;
-        int top = (tileIndex / PAGE_H_TILES) * TILE_HEIGHT;
-        int start = left + TILE_PAGE_SCANLINE * top;
+        int physPalette = getTilePhysPalette(tile);
+        byte[] palettePage = getPalletePage(physPalette);
+        byte[] tilePage = getTilePage(tile);
+        int tileIndex = getTileIndex(tile);
+        int left = getTileLeft(tileIndex);
+        int top = getTileTop(tileIndex);
+        int start = getTileStart(left, top);
         
-        int pcolumn = physPalette % PAGE_PALETTES;
+        int pcolumn = getPaletteColumn(physPalette);
 
         return convertToRgba(tilePage, start, TILE_WIDTH, TILE_HEIGHT, TILE_PAGE_SCANLINE, palettePage, pcolumn);
     }
-    
+
     public RgbaImage convertSpriteToRgba(int sprite) {
-        int base = structure.getPaletteBase().calcSpriteBase();
-        int physPalette = structure.getPaletteIndex().getPhysPalette()[base + sprite];
-        byte[] palettePage = structure.getPalletePages().get(physPalette / PAGE_PALETTES).getRaw();
+        int physPalette = getSpritePhysPalette(sprite);byte[] palettePage = getPalletePage(physPalette);
 
         StySpriteIndex index = structure.getSpriteIndexes().get(sprite);
-        long ptr = index.getPtr();
+        byte[] spritePage = getSpritePage(index);
         
-        byte[] spritePage = structure.getSpritePages().get( (int)(ptr / SPRITE_PAGE_SIZE) ).getRaw();
-        
-        int pcolumn = physPalette % PAGE_PALETTES;
-        int start = (int) ptr % SPRITE_PAGE_SIZE;
+        int pcolumn = getPaletteColumn(physPalette);
+        int start = getSpriteStart(index);
         
         return convertToRgba(spritePage, start, index.getWidth(), index.getHeight(), SPRITE_PAGE_SCANLINE, palettePage, pcolumn);
-        
+    }
+
+    private int getSpriteStart(StySpriteIndex index) {
+        return (int) index.getPtr() % SPRITE_PAGE_SIZE;
+    }
+
+    private byte[] getSpritePage(StySpriteIndex index) {
+        return structure.getSpritePages().get( (int)(index.getPtr() / SPRITE_PAGE_SIZE) ).getRaw();
     }
 
     private RgbaImage convertToRgba(byte[] tilePage, int start, int w, int h, int pageW, byte[] palettePage, int pcolumn) {
         byte[] out = new byte[w * h * 4];
-        int inScanWidth = (w * 4);
-        
+
+        int outOfs = 0;
         for(int y = 0; y < h; y++) {
-            int outScan = inScanWidth * y;
             int inScan = pageW * y;
             
             for(int x = 0; x < w; ++x) {
                 int inColor = (tilePage[start + x + inScan] & 0xFF);
                 int paletteOfs = (inColor * PAGE_PALETTES + pcolumn) * 4;
 
-                int outOfs = outScan + x * 4;
-                out[outOfs] = palettePage[paletteOfs + 2];
-                out[outOfs + 1] = palettePage[paletteOfs + 1];
-                out[outOfs + 2] = palettePage[paletteOfs + 0];
-                out[outOfs + 3] = (byte) (inColor == 0 ? 0 : 0xFF);
+                out[outOfs++] = palettePage[paletteOfs + 2];
+                out[outOfs++] = palettePage[paletteOfs + 1];
+                out[outOfs++] = palettePage[paletteOfs];
+                out[outOfs++] = (byte) (inColor == 0 ? 0 : 0xFF);
             }
         }
         return new RgbaImage(w, h, out);
+    }
+    
+    public ArgbImage convertTileToArgb(int tile) {
+        int physPalette = getTilePhysPalette(tile);
+        byte[] palettePage = getPalletePage(physPalette);
+        byte[] tilePage = getTilePage(tile);
+        int tileIndex = getTileIndex(tile);
+        int left = getTileLeft(tileIndex);
+        int top = getTileTop(tileIndex);
+        int start = getTileStart(left, top);
+        
+        int pcolumn = getPaletteColumn(physPalette);
+
+        return convertToArgb(tilePage, start, TILE_WIDTH, TILE_HEIGHT, TILE_PAGE_SCANLINE, palettePage, pcolumn);
+    }
+    
+    public RgbaImage convertSpriteToArgb(int sprite) {
+        int physPalette = getSpritePhysPalette(sprite);
+        byte[] palettePage = getPalletePage(physPalette);
+
+        StySpriteIndex index = structure.getSpriteIndexes().get(sprite);
+        byte[] spritePage = getSpritePage(index);
+        
+        int pcolumn = getPaletteColumn(physPalette);
+        int start = getSpriteStart(index);
+        
+        return convertToRgba(spritePage, start, index.getWidth(), index.getHeight(), SPRITE_PAGE_SCANLINE, palettePage, pcolumn);
+    }
+
+    private int getSpritePhysPalette(int sprite) {
+        int base = structure.getPaletteBase().calcSpriteBase();
+        return structure.getPaletteIndex().getPhysPalette()[base + sprite];
+    }
+
+    private ArgbImage convertToArgb(byte[] tilePage, int start, int w, int h, int pageW, byte[] palettePage, int pcolumn) {
+        int[] out = new int[w * h];
+
+        int outOfs = 0;
+        for(int y = 0; y < h; y++) {
+            int inScan = pageW * y;
+
+            for(int x = 0; x < w; ++x) {
+                int inColor = (tilePage[start + x + inScan] & 0xFF);
+                int paletteOfs = (inColor * PAGE_PALETTES + pcolumn) * 4;
+
+                int r = palettePage[paletteOfs];
+                int g = palettePage[paletteOfs + 1];
+                int b = palettePage[paletteOfs + 2];
+                int a = (inColor == 0 ? 0 : 0xFF);
+                out[outOfs++] = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
+            }
+        }
+        return new ArgbImage(w, h, out);
+    }
+    
+    private int getTileStart(int left, int top) {
+        return left + TILE_PAGE_SCANLINE * top;
+    }
+
+    private int getTilePhysPalette(int tile) {
+        int base = structure.getPaletteBase().calcTileBase();
+        return structure.getPaletteIndex().getPhysPalette()[base + tile];
+    }
+
+    private byte[] getTilePage(int tile) {
+        return structure.getTilePages().get(tile / PAGE_TILES).getRaw();
+    }
+
+    private int getTileTop(int tileIndex) {
+        return (tileIndex / PAGE_H_TILES) * TILE_HEIGHT;
+    }
+
+    private int getTileLeft(int tileIndex) {
+        return (tileIndex % PAGE_H_TILES) * TILE_WIDTH;
+    }
+
+    private int getTileIndex(int tile) {
+        return tile % PAGE_TILES;
+    }
+
+    private byte[] getPalletePage(int physPalette) {
+        return structure.getPalletePages().get(physPalette / PAGE_PALETTES).getRaw();
+    }
+
+    private int getPaletteColumn(int physPalette) {
+        return physPalette % PAGE_PALETTES;
     }
 }
