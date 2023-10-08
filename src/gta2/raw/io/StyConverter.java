@@ -95,7 +95,7 @@ public class StyConverter {
         return convertToArgb(tilePage, start, TILE_WIDTH, TILE_HEIGHT, TILE_PAGE_SCANLINE, palettePage, pcolumn);
     }
     
-    public RgbaImage convertSpriteToArgb(int sprite) {
+    public ArgbImage convertSpriteToArgb(int sprite) {
         int physPalette = getSpritePhysPalette(sprite);
         byte[] palettePage = getPalletePage(physPalette);
 
@@ -105,7 +105,7 @@ public class StyConverter {
         int pcolumn = getPaletteColumn(physPalette);
         int start = getSpriteStart(index);
         
-        return convertToRgba(spritePage, start, index.getWidth(), index.getHeight(), SPRITE_PAGE_SCANLINE, palettePage, pcolumn);
+        return convertToArgb(spritePage, start, index.getWidth(), index.getHeight(), SPRITE_PAGE_SCANLINE, palettePage, pcolumn);
     }
 
     private int getSpritePhysPalette(int sprite) {
@@ -124,9 +124,9 @@ public class StyConverter {
                 int inColor = (tilePage[start + x + inScan] & 0xFF);
                 int paletteOfs = (inColor * PAGE_PALETTES + pcolumn) * 4;
 
-                int r = palettePage[paletteOfs];
+                int b = palettePage[paletteOfs];
                 int g = palettePage[paletteOfs + 1];
-                int b = palettePage[paletteOfs + 2];
+                int r = palettePage[paletteOfs + 2];
                 int a = (inColor == 0 ? 0 : 0xFF);
                 out[outOfs++] = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
             }
