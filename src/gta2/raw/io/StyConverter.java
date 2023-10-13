@@ -20,6 +20,8 @@ import static gta2.raw.sty.StyConstants.SPRITE_PAGE_SIZE;
  * Converts GTA2 sty data into usable RGBA data
  */
 public class StyConverter {
+    private static final int EXPLOSION_START = 878;
+    private static final int EXPLOSION_END = 1059;
     private StyFileStructure structure;
     
     public StyConverter(StyFileStructure structure) {
@@ -50,6 +52,9 @@ public class StyConverter {
         int pcolumn = getPaletteColumn(physPalette);
         int start = getSpriteStart(index);
         
+        if(sprite >= EXPLOSION_START && sprite <= EXPLOSION_END) {
+            return convertExplosionToRgba(spritePage, start, index.getWidth(), index.getHeight(), SPRITE_PAGE_SCANLINE, palettePage, pcolumn);
+        }
         return convertToRgba(spritePage, start, index.getWidth(), index.getHeight(), SPRITE_PAGE_SCANLINE, palettePage, pcolumn);
     }
 
@@ -81,6 +86,33 @@ public class StyConverter {
         return new RgbaImage(w, h, out);
     }
     
+    private RgbaImage convertExplosionToRgba(byte[] tilePage, int start, int w, int h, int pageW, byte[] palettePage, int pcolumn) {
+        byte[] out = new byte[w * h * 4];
+
+        int outOfs = 0;
+        for(int y = 0; y < h; y++) {
+            int inScan = pageW * y;
+            
+            for(int x = 0; x < w; ++x) {
+                int inColor = (tilePage[start + x + inScan] & 0xFF);
+                int paletteOfs = (inColor * PAGE_PALETTES + pcolumn) * 4;
+
+                int r = palettePage[paletteOfs + 2] & 0xFF;
+                byte a = (byte) (inColor == 0 ? 0 : 0xFF);
+                
+                if(a != 0) {
+                    a = (byte) Math.min(255, (r * 2));
+                }
+                
+                out[outOfs++] = palettePage[paletteOfs + 2];
+                out[outOfs++] = palettePage[paletteOfs + 1];
+                out[outOfs++] = palettePage[paletteOfs];
+                out[outOfs++] = a;
+            }
+        }
+        return new RgbaImage(w, h, out);
+    }
+    
     public ArgbImage convertTileToArgb(int tile) {
         int physPalette = getTilePhysPalette(tile);
         byte[] palettePage = getPalletePage(physPalette);
@@ -105,6 +137,9 @@ public class StyConverter {
         int pcolumn = getPaletteColumn(physPalette);
         int start = getSpriteStart(index);
         
+        if(sprite >= EXPLOSION_START && sprite <= EXPLOSION_END) {
+            convertExplosionToArgb(spritePage, start, index.getWidth(), index.getHeight(), SPRITE_PAGE_SCANLINE, palettePage, pcolumn);
+        }
         return convertToArgb(spritePage, start, index.getWidth(), index.getHeight(), SPRITE_PAGE_SCANLINE, palettePage, pcolumn);
     }
 
@@ -129,6 +164,32 @@ public class StyConverter {
                 int r = palettePage[paletteOfs + 2];
                 int a = (inColor == 0 ? 0 : 0xFF);
                 out[outOfs++] = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
+            }
+        }
+        return new ArgbImage(w, h, out);
+    }
+    
+    private ArgbImage convertExplosionToArgb(byte[] tilePage, int start, int w, int h, int pageW, byte[] palettePage, int pcolumn) {
+        int[] out = new int[w * h];
+
+        int outOfs = 0;
+        for(int y = 0; y < h; y++) {
+            int inScan = pageW * y;
+
+            for(int x = 0; x < w; ++x) {
+                int inColor = (tilePage[start + x + inScan] & 0xFF);
+                int paletteOfs = (inColor * PAGE_PALETTES + pcolumn) * 4;
+
+                int b = ((int)palettePage[paletteOfs]) & 0xff;
+                int g = ((int)palettePage[paletteOfs + 1]) & 0xff;
+                int r = ((int)palettePage[paletteOfs + 2]) & 0xff;
+                int a = (inColor == 0 ? 0 : 0xFF);
+                
+                if(a != 0) {
+                    a = (byte) Math.min(255, (r * 2));
+                }
+                
+                out[outOfs++] = a << 24 | r << 16 | g << 8 | b;
             }
         }
         return new ArgbImage(w, h, out);

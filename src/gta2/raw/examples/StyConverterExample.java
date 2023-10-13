@@ -46,7 +46,7 @@ public class StyConverterExample {
         if(!inputFile.exists()) {
             throw new FileNotFoundException(inputFile.getAbsolutePath() + " does not exist");
         }
-        File outputFolder = new File(args[1]);
+        File outputFolder = new File(new File(args[1]), inputFile.getName());
         if(!outputFolder.exists()) {
             outputFolder.mkdir();
         }

@@ -74,6 +74,7 @@ public class StySpecs {
             specs.metalFloorTiles = input.readZtUInt16List();
             specs.metalWallTiles = input.readZtUInt16List();
             specs.grassDirtWallTiles = input.readZtUInt16List();
+            dst.setSpecs(specs);
         }
     }
 }

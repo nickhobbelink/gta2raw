@@ -8,6 +8,7 @@ import gta2.raw.sty.structures.StyPaletteBase;
 import gta2.raw.sty.structures.StyPaletteIndex;
 import gta2.raw.sty.structures.StyPalettePage;
 import gta2.raw.sty.structures.StyRecyclingInfo;
+import gta2.raw.sty.structures.StySpecs;
 import gta2.raw.sty.structures.StySpriteBase;
 import gta2.raw.sty.structures.StySpriteIndex;
 import gta2.raw.sty.structures.StySpritePage;
@@ -28,6 +29,7 @@ public class StyFileStructure {
     private List<StySpritePage> spritePages;
     private List<StySpriteIndex> spriteIndexes;
     private StyPaletteBase paletteBase;
+    private StySpecs specs;
     
     public List<StyTilePage> getTilePages() {
         return tilePages;
@@ -107,5 +109,13 @@ public class StyFileStructure {
     
     public void setSpriteIndexes(List<StySpriteIndex> spriteIndexes) {
         this.spriteIndexes = spriteIndexes;
+    }
+
+    public StySpecs getSpecs() {
+        return specs;
+    }
+
+    public void setSpecs(StySpecs specs) {
+        this.specs = specs;
     }
 }
